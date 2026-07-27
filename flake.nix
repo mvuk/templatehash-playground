@@ -64,6 +64,9 @@
 
           LIBCLANG_PATH = "${pkgs.llvmPackages.clang-unwrapped.lib}/lib";
           PROTOC = "${pkgs.protobuf}/bin/protoc";
+          # Several build.rs shell out to `git rev-parse HEAD`; there's no git/.git
+          # in the Nix sandbox, but they honor GIT_HASH if set. Pin it to bark's rev.
+          GIT_HASH = "29a35ca803e9a982369542f03348a1fcd4ba97a4";
 
           doCheck = false; # integration tests need bitcoind/postgres
 
