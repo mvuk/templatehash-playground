@@ -21,6 +21,7 @@ if [ ! -e "$DATADIR/db.sqlite" ]; then
 else
   echo "Using wallet at $DATADIR"
 fi
+chmod 600 "$DATADIR/db.sqlite" 2>/dev/null || true
 
 WEBROOT="$(mktemp -d)"
 SERVER_PID=""; LOOP_PID=""
@@ -110,6 +111,21 @@ HTML
 generate
 ( while true; do sleep 15; generate 2>/dev/null || true; done ) &
 LOOP_PID=$!
+
+# Pick a free port if the requested one is taken.
+PORT="$(python3 - "$PORT" <<'PY'
+import socket, sys
+start = int(sys.argv[1])
+for c in range(start, start + 20):
+    s = socket.socket()
+    try:
+        s.bind(("127.0.0.1", c)); s.close(); print(c); break
+    except OSError:
+        s.close()
+else:
+    print(start)
+PY
+)"
 
 URL="http://localhost:$PORT"
 echo ""

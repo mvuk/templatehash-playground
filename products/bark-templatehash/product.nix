@@ -27,6 +27,7 @@
       else
         echo "▶ Reusing existing wallet."
       fi
+      chmod 600 "$DATADIR/db.sqlite" 2>/dev/null || true
 
       echo ""
       echo "▶ Ark server (OP_TEMPLATEHASH):"
