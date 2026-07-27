@@ -106,13 +106,21 @@
             echo "Run one with:  ./playground <name>   (or)   nix run .#<name>"
           '';
         };
+
+        # Live localhost status page (writeShellScriptBin => no shellcheck on the heredoc HTML).
+        statusApp = pkgs.writeShellScriptBin "status" ''
+          export PATH=${lib.makeBinPath [ bark-cli pkgs.jq pkgs.curl pkgs.python3 pkgs.coreutils ]}''${PATH:+:$PATH}
+          ${builtins.readFile ./lib/status-page.sh}
+        '';
       in {
         packages = { inherit bark-cli; default = bark-cli; };
 
         apps = (lib.mapAttrs (_: p: mkApp p.app) products) // {
           list = mkApp listApp;
-          default = mkApp products.${defaultProduct}.app;
-          playground = mkApp products.${defaultProduct}.app;
+          status = mkApp statusApp;
+          # `./playground` (default) opens the live status page, which also ensures the wallet.
+          default = mkApp statusApp;
+          playground = mkApp statusApp;
         };
 
         devShells.default = pkgs.mkShell {
