@@ -15,7 +15,7 @@ tested on the public signet via Bitcoin Inquisition. Learn about the bundle at
 [github.com/bip448](https://github.com/bip448).
 
 Product #1 is an **Ark wallet** (the `bark` client) demonstrating `OP_TEMPLATEHASH`
-(BIP446), on the **public signet** pointed at the covenant ASP `ark.templatehash.com`.
+(BIP446), on the **public signet** pointed at the covenant Ark server `ark.templatehash.com`.
 The whole thing is a Nix flake, so it builds the same everywhere. Future products
 exercise other parts of the bundle.
 
@@ -73,7 +73,7 @@ the user rather than looping.
 2. **Funding (manual in phase 1):** get a receive address from the wallet and fund it at
    <https://signet.2nd.dev> (on-chain or as an Ark VTXO). The faucet HTTP API exists
    (`POST /api/v1/faucet/{ark,bitcoin,lightning}`) but is **not wired in yet** — its Ark
-   endpoint currently targets a different ASP.
+   endpoint currently targets a different Ark server.
 3. Explain to the human what they're seeing: OP_TEMPLATEHASH lets an output commit to
    its spending transaction (a covenant); Ark uses it so VTXOs don't need pre-signed
    transactions. This wallet is that, live, on signet.

@@ -8,7 +8,7 @@ bundle at **[github.com/bip448](https://github.com/bip448)**.
 
 Its first hands-on demo puts **Ark covenants** in your hands using `OP_TEMPLATEHASH`
 (BIP446 — one opcode of the bundle) via [templatehash.com](https://templatehash.com)'s
-ASP. Further demos, each exercising part of the bundle, plug in as [products](./products).
+Ark server. Further demos, each exercising part of the bundle, plug in as [products](./products).
 
 ## Fastest path: hand it to your AI agent
 

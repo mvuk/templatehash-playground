@@ -1,15 +1,15 @@
 # Product #1 — the reference example.
 # An Ark (bark) wallet on the public signet, pointed at the OP_TEMPLATEHASH
-# covenant ASP (ark.templatehash.com) instead of bark's default signet ASP.
+# covenant Ark server (ark.templatehash.com) instead of bark's default signet Ark server.
 { pkgs, lib, bark-cli }:
 {
-  description = "Ark covenant wallet on signet via OP_TEMPLATEHASH (BIP446), ASP = ark.templatehash.com";
+  description = "Ark covenant wallet on signet via OP_TEMPLATEHASH (BIP446), Ark server = ark.templatehash.com";
 
   app = pkgs.writeShellApplication {
     name = "bark-templatehash";
     runtimeInputs = [ bark-cli pkgs.jq ];
     text = ''
-      # NOTE: bark's --signet default ASP is ark.signet.2nd.dev (the MAIN signet ark).
+      # NOTE: bark's --signet default Ark server is ark.signet.2nd.dev (the MAIN signet ark).
       # templatehash requires overriding it. esplora defaults to the shared signet source.
       ARK="''${TEMPLATEHASH_ARK:-ark.templatehash.com}"
       DATADIR="''${BARK_DATADIR:-$PWD/playground-data/bark-templatehash}"
@@ -18,7 +18,7 @@
 
       echo "== templatehash playground: bark + OP_TEMPLATEHASH =="
       echo "   datadir: $DATADIR"
-      echo "   ASP:     $ARK"
+      echo "   Ark server:     $ARK"
       echo ""
 
       if [ ! -e "$DATADIR/db.sqlite" ]; then
@@ -29,7 +29,7 @@
       fi
 
       echo ""
-      echo "▶ Ark server (OP_TEMPLATEHASH ASP):"
+      echo "▶ Ark server (OP_TEMPLATEHASH):"
       bark -q ark-info | jq '{network, server_pubkey, round_interval, min_board_amount_sat}'
 
       VTXO="$(bark -q address)"

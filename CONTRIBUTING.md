@@ -25,6 +25,6 @@ The playground is a registry of small, self-contained experiments. Adding one is
 - **Keep it self-contained and idempotent** — safe to run twice. Write runtime state under
   `./playground-data/<name>/` (git-ignored).
 - **Public signet only** for now. Point Ark products at `ark.templatehash.com` explicitly —
-  bark's `--signet` default ASP is a *different* server.
+  bark's `--signet` default Ark server is a *different* server.
 - **No secrets in the repo.** Read config from env vars with sensible defaults.
 - Prefer adding runtime tools via `runtimeInputs` rather than assuming they're on PATH.

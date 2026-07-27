@@ -1,6 +1,6 @@
 # templatehash playground — localhost status page.
 # Ensures the default wallet exists, then serves a live status page that reflects
-# REAL checks (wallet, ASP, chain source, faucet, balance). Loaded by the flake into
+# REAL checks (wallet, Ark server, chain source, faucet, balance). Loaded by the flake into
 # a writeShellScriptBin wrapper that puts bark/jq/curl/python3 on PATH.
 set -euo pipefail
 
@@ -16,7 +16,7 @@ mkdir -p "$(dirname "$DATADIR")"
 
 echo "== templatehash playground =="
 if [ ! -e "$DATADIR/db.sqlite" ]; then
-  echo "Creating covenant-enabled signet wallet (ASP: $ARK)…"
+  echo "Creating covenant-enabled signet wallet (Ark server: $ARK)…"
   bark create --signet --datadir "$DATADIR" --ark "$ARK" || true
 else
   echo "Using wallet at $DATADIR"
@@ -54,7 +54,7 @@ generate() {
   [ -e "$DATADIR/db.sqlite" ] && { wal_ok=ok; wal_detail="ready"; }
   bal="$(bark -q balance 2>/dev/null | jq -r '.spendable_sat' 2>/dev/null || echo '?')"
 
-  all_ok="Connected to signet · ASP live"
+  all_ok="Connected to signet · Ark server live"
   [ "$ark_ok" = ok ] && [ "$esp_ok" = ok ] || all_ok="Some services unreachable — check your network"
   now="$(date '+%H:%M:%S')"
 
@@ -88,7 +88,7 @@ generate() {
   <div class="banner">$(dot "$ark_ok") &nbsp;$all_ok</div>
   <div class="card">
     <div class="row">$(dot "$wal_ok")<span class="k">bark wallet</span><span class="d">$wal_detail</span></div>
-    <div class="row">$(dot "$ark_ok")<span class="k">Ark server (ASP)</span><span class="d">$ARK · $ark_detail</span></div>
+    <div class="row">$(dot "$ark_ok")<span class="k">Ark server</span><span class="d">$ARK · $ark_detail</span></div>
     <div class="row">$(dot "$esp_ok")<span class="k">Chain source (esplora)</span><span class="d">$esp_detail</span></div>
     <div class="row">$(dot "$fau_ok")<span class="k">Faucet</span><span class="d">signet.2nd.dev</span></div>
   </div>
@@ -102,7 +102,7 @@ generate() {
     <a class="btn sec" href="$LEARN" target="_blank" rel="noopener">What is OP_TEMPLATEHASH?</a>
     <a class="btn sec" href="$REPO" target="_blank" rel="noopener">Add a demo (PR)</a>
   </div>
-  <p class="foot">Phase 1: connected to the public signet via the hosted ASP — no local node runs yet.<br>Updated $now · auto-refresh 15s</p>
+  <p class="foot">Phase 1: connected to the public signet via the hosted Ark server — no local node runs yet.<br>Updated $now · auto-refresh 15s</p>
 </div></body></html>
 HTML
 }
