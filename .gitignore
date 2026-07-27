@@ -1,0 +1,5 @@
+# Wallet state / runtime data created by playground products
+/playground-data/
+result
+result-*
+.direnv/
