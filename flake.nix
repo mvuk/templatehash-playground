@@ -3,8 +3,14 @@
 
   # Reuse bark's binary cache so deps don't recompile once phase-2 CI publishes ours.
   nixConfig = {
-    extra-substituters = [ "https://bark.cachix.org" ];
-    extra-trusted-public-keys = [ "bark.cachix.org-1:Iaihe4ABbOQz1CHBoYUZS/sHVAcISasJZ+lL3I4gRB0=" ];
+    extra-substituters = [
+      "https://templatehash-playground.cachix.org"
+      "https://bark.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "templatehash-playground.cachix.org-1:NzG5hoXN6gRR27AtwG1bmK4lMxYftVAy5+4ZLIBVI2Y="
+      "bark.cachix.org-1:Iaihe4ABbOQz1CHBoYUZS/sHVAcISasJZ+lL3I4gRB0="
+    ];
   };
 
   inputs = {
