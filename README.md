@@ -10,9 +10,11 @@ A one-command, reproducible playground for the **BIP448 bundle** — Taproot-nat
 [Bitcoin Inquisition](https://github.com/bitcoin-inquisition/bitcoin). Learn about the
 bundle at **[github.com/bip448](https://github.com/bip448)**.
 
-Its first hands-on demo puts **Ark covenants** in your hands using `OP_TEMPLATEHASH`
-(BIP446 — one opcode of the bundle) via [templatehash.com](https://templatehash.com)'s
-Ark server. Further demos, each exercising part of the bundle, plug in as [products](./products).
+It's a registry of independent [projects](./products), each demoing part of the bundle on
+signet. The **first** one puts **Ark covenants** in your hands via `OP_TEMPLATEHASH`
+(BIP446, one opcode of the bundle) using [templatehash.com](https://templatehash.com)'s
+hosted server — but Ark is just entry #1; more projects plug in as the bundle's other
+pieces get exercised.
 
 ## Fastest path: hand it to your AI agent
 
@@ -45,20 +47,19 @@ No Nix, and don't want it? Use the prebuilt image (published by CI):
 docker run --rm -it -p 4848:4848 ghcr.io/mvuk/templatehash-playground
 ```
 
-## Products
+## Projects
 
-The playground is a registry of small, self-contained demos — run `./playground list` to
-see them. Today there's one:
+The playground is a registry of independent projects, each demoing part of the BIP448
+bundle on the public signet — `./playground list` shows them. **Right now there's exactly
+one, with room for many more:**
 
-- **`bark-templatehash`** *(default)* — a covenant-enabled **bark client** (wallet) on the
-  public signet, exercising `OP_TEMPLATEHASH`.
+- **`bark-templatehash`** *(the first — and currently only — project)* — a covenant-enabled
+  **bark client** (Ark wallet) exercising `OP_TEMPLATEHASH`.
+  > This starts the bark **client** and points it at the **hosted** Ark server
+  > `ark.templatehash.com`; it does **not** run a `captaind` / Ark server of your own.
 
-> **This runs the bark _client_, not an Ark server.** It does **not** start a `captaind` /
-> Ark server of your own — it points your wallet at the **hosted** server at
-> `ark.templatehash.com`, on the ordinary public signet. You're a client of
-> templatehash.com's Ark server.
-
-More demos land here as `products/` — see [Add your own experiment](#add-your-own-experiment).
+Adding the next project is a PR: copy [`products/_template/`](./products/_template) — see
+[Add your own experiment](#add-your-own-experiment).
 
 ## Funding a wallet
 
