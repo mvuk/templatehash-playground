@@ -35,8 +35,19 @@ nix run .#default        # if you prefer driving Nix directly
 
 ## Funding a wallet
 
-Fund your signet wallet at the [Second signet faucet](https://signet.2nd.dev) — on-chain,
-over Lightning, or as an Ark VTXO. (Automatic faucet funding is a phase-2 feature.)
+**Right now the templatehash Ark server can only be funded by _on-chain receive_ or
+_Lightning receive_ — not by a direct Ark (VTXO) drop.** The [Second signet
+faucet](https://signet.2nd.dev)'s Ark option currently pays the *covenantless*
+(non-templatehash) Ark server — a different server on the same signet — so it won't land
+in this wallet. Use one of:
+
+- **On-chain:** get an address with `bark onchain address`, request signet coins for it at
+  the faucet (on-chain option), then board into Ark with `bark board --all`.
+- **Lightning:** mint an invoice with `bark lightning invoice "100000 sats"` and pay it at
+  the faucet (Lightning option) — it settles straight into a spendable VTXO.
+
+(Automatic faucet funding, and faucet support for the templatehash Ark server, are
+phase-2 items.)
 
 ## Add your own experiment
 
