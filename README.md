@@ -1,9 +1,14 @@
 # templatehash-playground
 
-A one-command, reproducible playground for **OP_TEMPLATEHASH (BIP446)** — the covenant
-opcode behind [templatehash.com](https://templatehash.com). It builds an
-[Ark](https://second.tech) wallet (the `bark` client) on the public **signet**, pointed
-at the covenant ASP `ark.templatehash.com`, so you can try covenants live.
+A one-command, reproducible playground for the **BIP448 bundle** — Taproot-native
+*rebindable transactions* (the LNHANCE / CTV+CSFS lineage: `OP_INTERNALKEY`,
+`OP_CHECKSIGFROMSTACK`, `OP_TEMPLATEHASH`), testable today on the public **signet** via
+[Bitcoin Inquisition](https://github.com/bitcoin-inquisition/bitcoin). Learn about the
+bundle at **[github.com/bip448](https://github.com/bip448)**.
+
+Its first hands-on demo puts **Ark covenants** in your hands using `OP_TEMPLATEHASH`
+(BIP446 — one opcode of the bundle) via [templatehash.com](https://templatehash.com)'s
+ASP. Further demos, each exercising part of the bundle, plug in as [products](./products).
 
 ## Fastest path: hand it to your AI agent
 

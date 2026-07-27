@@ -1,5 +1,5 @@
 {
-  description = "templatehash-playground — a one-paste-to-LLM covenant playground for OP_TEMPLATEHASH (BIP446), built on Ark/bark and the public signet";
+  description = "templatehash-playground — a one-command, reproducible playground for the BIP448 bundle (Taproot-native rebindable transactions); first demo: Ark covenants via OP_TEMPLATEHASH (BIP446) on the public signet";
 
   # Reuse bark's binary cache so deps don't recompile once phase-2 CI publishes ours.
   nixConfig = {

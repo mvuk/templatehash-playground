@@ -1,18 +1,23 @@
 # AGENTS.md — runbook for LLM agents
 
 You are most likely an AI coding agent (Claude Code, Cursor, etc.) that a human
-pointed at this repository so you can **spin up a working OP_TEMPLATEHASH covenant
-playground for them**. This file is your instruction set. Follow it top to bottom.
+pointed at this repository so you can **spin up a working BIP448-bundle playground for
+them** (first demo: OP_TEMPLATEHASH covenants via Ark). This file is your instruction
+set. Follow it top to bottom.
 
 `CLAUDE.md` is a symlink to this file.
 
 ## What this is
 
-A one-command, reproducible playground for **OP_TEMPLATEHASH (BIP446)** — the
-covenant opcode behind [templatehash.com](https://templatehash.com). Product #1 is
-an **Ark wallet** (the `bark` client) on the **public signet**, pointed at the
-covenant ASP `ark.templatehash.com`. The whole thing is a Nix flake, so it builds
-the same everywhere.
+A one-command, reproducible playground for the **BIP448 bundle** — Taproot-native
+rebindable transactions (`OP_INTERNALKEY`, `OP_CHECKSIGFROMSTACK`, `OP_TEMPLATEHASH`),
+tested on the public signet via Bitcoin Inquisition. Learn about the bundle at
+[github.com/bip448](https://github.com/bip448).
+
+Product #1 is an **Ark wallet** (the `bark` client) demonstrating `OP_TEMPLATEHASH`
+(BIP446), on the **public signet** pointed at the covenant ASP `ark.templatehash.com`.
+The whole thing is a Nix flake, so it builds the same everywhere. Future products
+exercise other parts of the bundle.
 
 ## The one command
 
