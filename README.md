@@ -45,6 +45,21 @@ No Nix, and don't want it? Use the prebuilt image (published by CI):
 docker run --rm -it -p 4848:4848 ghcr.io/mvuk/templatehash-playground
 ```
 
+## Products
+
+The playground is a registry of small, self-contained demos — run `./playground list` to
+see them. Today there's one:
+
+- **`bark-templatehash`** *(default)* — a covenant-enabled **bark client** (wallet) on the
+  public signet, exercising `OP_TEMPLATEHASH`.
+
+> **This runs the bark _client_, not an Ark server.** It does **not** start a `captaind` /
+> Ark server of your own — it points your wallet at the **hosted** server at
+> `ark.templatehash.com`, on the ordinary public signet. You're a client of
+> templatehash.com's Ark server.
+
+More demos land here as `products/` — see [Add your own experiment](#add-your-own-experiment).
+
 ## Funding a wallet
 
 **A templatehash Ark wallet can currently be funded only by _on-chain receive_ or

@@ -85,7 +85,7 @@ generate() {
   .foot{color:var(--mut);font-size:12px;margin-top:18px;text-align:center}
 </style></head><body><div class="wrap">
   <h1>templatehash playground</h1>
-  <p class="sub">OP_TEMPLATEHASH (BIP446) · Ark on the public signet</p>
+  <p class="sub">bark <b>client</b> · OP_TEMPLATEHASH (BIP446) · connected to a hosted Ark server on public signet</p>
   <div class="banner">$(dot "$ark_ok") &nbsp;$all_ok</div>
   <div class="card">
     <div class="row">$(dot "$wal_ok")<span class="k">bark wallet</span><span class="d">$wal_detail</span></div>

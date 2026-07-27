@@ -18,7 +18,7 @@
 
       echo "== templatehash playground: bark + OP_TEMPLATEHASH =="
       echo "   datadir: $DATADIR"
-      echo "   Ark server:     $ARK"
+      echo "   Ark server:  $ARK  (hosted — this starts the bark CLIENT, not a captaind)"
       echo ""
 
       if [ ! -e "$DATADIR/db.sqlite" ]; then
