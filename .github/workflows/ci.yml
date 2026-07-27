@@ -10,6 +10,10 @@ permissions:
   contents: read
   packages: write
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Build + check on Linux and macOS. The macOS leg is what validates the
   # aarch64-darwin build we can't test from a NixOS dev box.

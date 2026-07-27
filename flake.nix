@@ -79,11 +79,9 @@
             pkgs.protobuf
             pkgs.llvmPackages.clang
           ];
-          buildInputs = [ pkgs.openssl pkgs.sqlite ]
-            ++ lib.optionals pkgs.stdenv.isDarwin [
-              pkgs.darwin.apple_sdk.frameworks.Security
-              pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
-            ];
+          # Modern nixpkgs darwin stdenv provides the SDK frameworks automatically;
+          # with tls-webpki-roots + sqlite-bundled we don't need to add any.
+          buildInputs = [ pkgs.openssl pkgs.sqlite ];
 
           LIBCLANG_PATH = "${pkgs.llvmPackages.clang-unwrapped.lib}/lib";
           PROTOC = "${pkgs.protobuf}/bin/protoc";
