@@ -112,8 +112,35 @@
           export PATH=${lib.makeBinPath [ bark-cli pkgs.jq pkgs.curl pkgs.python3 pkgs.coreutils ]}''${PATH:+:$PATH}
           ${builtins.readFile ./lib/status-page.sh}
         '';
+
+        # Entry dispatcher baked into the Docker image so `docker run <image> <product>` works.
+        dockerEntry = pkgs.writeShellScriptBin "playground-entry" ''
+          export PATH=${lib.makeBinPath [ bark-cli pkgs.jq pkgs.curl pkgs.python3 pkgs.coreutils ]}:$PATH
+          export SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
+          cmd="''${1:-default}"; [ $# -gt 0 ] && shift || true
+          case "$cmd" in
+            ""|default|status|playground) exec ${statusApp}/bin/status "$@" ;;
+            bark-templatehash)             exec ${products.bark-templatehash.app}/bin/bark-templatehash "$@" ;;
+            bark)                          exec bark "$@" ;;
+            list)                          exec ${listApp}/bin/list-products ;;
+            *) echo "unknown product: $cmd (try: default | bark-templatehash | bark | list)"; exit 2 ;;
+          esac
+        '';
+
+        # Prebuilt OCI image (Linux only): `docker run -p 4848:4848 ghcr.io/mvuk/templatehash-playground`.
+        dockerImage = pkgs.dockerTools.buildLayeredImage {
+          name = "templatehash-playground";
+          tag = "latest";
+          config = {
+            Entrypoint = [ "${dockerEntry}/bin/playground-entry" ];
+            ExposedPorts = { "4848/tcp" = { }; };
+            Env = [ "PLAYGROUND_PORT=4848" ];
+            WorkingDir = "/tmp";
+          };
+        };
       in {
-        packages = { inherit bark-cli; default = bark-cli; };
+        packages = { inherit bark-cli; default = bark-cli; }
+          // lib.optionalAttrs pkgs.stdenv.isLinux { docker = dockerImage; };
 
         apps = (lib.mapAttrs (_: p: mkApp p.app) products) // {
           list = mkApp listApp;
@@ -130,5 +157,12 @@
             echo "Try:  ./playground        (runs the ${defaultProduct} demo)"
           '';
         };
+
+        # `nix flake check` runs these (plus builds every package/devShell for the system).
+        checks.bootstrap-shellcheck = pkgs.runCommand "bootstrap-shellcheck"
+          { nativeBuildInputs = [ pkgs.shellcheck ]; }
+          "shellcheck -S warning ${./playground}; touch $out";
+
+        formatter = pkgs.nixfmt-rfc-style;
       });
 }

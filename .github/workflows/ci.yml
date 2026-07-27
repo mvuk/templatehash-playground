@@ -1,0 +1,64 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # Build + check on Linux and macOS. The macOS leg is what validates the
+  # aarch64-darwin build we can't test from a NixOS dev box.
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, system: x86_64-linux }
+          - { os: macos-14,      system: aarch64-darwin }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      # Installing via the Determinate installer here also exercises the same
+      # installer our ./playground bootstrap uses.
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: cachix/cachix-action@v15
+        with:
+          name: templatehash-playground
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: flake check
+        run: nix flake check --accept-flake-config -L
+      - name: build bark-cli (${{ matrix.system }})
+        run: nix build .#bark-cli --accept-flake-config -L
+
+  # Build the OCI image from the same flake and publish to GHCR (Linux only).
+  docker:
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: cachix/cachix-action@v15
+        with:
+          name: templatehash-playground
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: build image
+        run: nix build .#docker --accept-flake-config -L
+      - name: load + tag
+        run: |
+          docker load < result
+          IMG=ghcr.io/${{ github.repository_owner }}/templatehash-playground
+          docker tag templatehash-playground:latest "$IMG:latest"
+          docker tag templatehash-playground:latest "$IMG:${GITHUB_SHA::12}"
+      - name: login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+      - name: push
+        run: |
+          IMG=ghcr.io/${{ github.repository_owner }}/templatehash-playground
+          docker push "$IMG:latest"
+          docker push "$IMG:${GITHUB_SHA::12}"

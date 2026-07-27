@@ -1,5 +1,9 @@
 # templatehash-playground
 
+[![ci](https://github.com/mvuk/templatehash-playground/actions/workflows/ci.yml/badge.svg)](https://github.com/mvuk/templatehash-playground/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/mvuk/templatehash-playground)
+
 A one-command, reproducible playground for the **BIP448 bundle** — Taproot-native
 *rebindable transactions* (the LNHANCE / CTV+CSFS lineage: `OP_INTERNALKEY`,
 `OP_CHECKSIGFROMSTACK`, `OP_TEMPLATEHASH`), testable today on the public **signet** via
@@ -33,6 +37,12 @@ system config) and launches the default product. Then:
 nix run .#default        # if you prefer driving Nix directly
 ```
 
+No Nix, and don't want it? Use the prebuilt image (published by CI):
+
+```sh
+docker run --rm -it -p 4848:4848 ghcr.io/mvuk/templatehash-playground
+```
+
 ## Funding a wallet
 
 **A templatehash Ark wallet can currently be funded only by _on-chain receive_ or
@@ -55,11 +65,23 @@ This is a community playground. Copy [`products/_template/`](./products/_templat
 it, and open a PR — your experiment becomes `nix run .#<your-name>`. See
 [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
+## Zero-compile & maintainer setup
+
+CI ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) builds the flake on Linux and
+macOS, runs `nix flake check`, and publishes:
+- a **Cachix** cache so `nix run` pulls prebuilt binaries (no compile), and
+- a **Docker image** to `ghcr.io/mvuk/templatehash-playground`.
+
+To turn the cache on: create a Cachix cache named `templatehash-playground`, add its
+`CACHIX_AUTH_TOKEN` as a repository secret, then add it as a substituter in `flake.nix`'s
+`nixConfig` (next to `bark.cachix.org`).
+
 ## Status
 
-**Phase 1** — reproducible `nix run` bundle, bark + templatehash on public signet.
-**Phase 2 (planned)** — Cachix + prebuilt Docker image (zero compile), "Open in Codespaces"
-button, faucet-API auto-funding, and an optional Bitcoin Inquisition node module.
+**Phase 1 (done)** — reproducible `nix run` bundle; bark + templatehash on public signet;
+live status dashboard; validated on-chain receive, board→Ark, and Lightning receive.
+**Phase 2 (in progress)** — CI + Cachix + Docker + Codespaces (the zero-compile onramp); an
+optional Bitcoin Inquisition node module (E).
 
 ## License
 

@@ -1,0 +1,13 @@
+{
+  "name": "templatehash-playground",
+  "image": "nixos/nix:latest",
+  "containerEnv": {
+    "NIX_CONFIG": "experimental-features = nix-command flakes\naccept-flake-config = true"
+  },
+  "onCreateCommand": "nix profile install nixpkgs#git nixpkgs#bashInteractive || true",
+  "postAttachCommand": "echo 'Ready — run:  ./playground   then open the forwarded port 4848'",
+  "forwardPorts": [4848],
+  "portsAttributes": {
+    "4848": { "label": "playground dashboard", "onAutoForward": "openBrowser" }
+  }
+}
