@@ -28,13 +28,15 @@ cd templatehash-playground
 ./playground
 ```
 
-`./playground` gets Nix ready (installing it only if necessary — and never touching your
-system config) and launches the default product. Then:
+`./playground` gets Nix ready — installing it only if necessary (via the Determinate
+installer), and using per-command flags instead of editing any existing Nix config — then
+launches the default product: a live **status dashboard at http://localhost:4848**. Then:
 
 ```sh
 ./playground list        # see all products
 ./playground <name>      # run a specific one
 nix run .#default        # if you prefer driving Nix directly
+nix run .#node           # (Linux) run a local Bitcoin Inquisition signet node
 ```
 
 No Nix, and don't want it? Use the prebuilt image (published by CI):
@@ -65,23 +67,27 @@ This is a community playground. Copy [`products/_template/`](./products/_templat
 it, and open a PR — your experiment becomes `nix run .#<your-name>`. See
 [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
-## Zero-compile & maintainer setup
+## Zero-compile
 
 CI ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) builds the flake on Linux and
-macOS, runs `nix flake check`, and publishes:
-- a **Cachix** cache so `nix run` pulls prebuilt binaries (no compile), and
-- a **Docker image** to `ghcr.io/mvuk/templatehash-playground`.
+macOS on every push and publishes two prebuilt paths, so nobody has to compile:
+- a **Cachix** cache ([`templatehash-playground.cachix.org`](https://app.cachix.org/cache/templatehash-playground)),
+  already wired into the flake — `nix run` / `./playground` pull prebuilt binaries, and
+- a **Docker image** at `ghcr.io/mvuk/templatehash-playground`.
 
-To turn the cache on: create a Cachix cache named `templatehash-playground`, add its
-`CACHIX_AUTH_TOKEN` as a repository secret, then add it as a substituter in `flake.nix`'s
-`nixConfig` (next to `bark.cachix.org`).
+Forking? Point CI at your own cache: create a Cachix cache, add its `CACHIX_AUTH_TOKEN`
+secret, and swap the substituter + key in `flake.nix`'s `nixConfig`.
 
 ## Status
 
-**Phase 1 (done)** — reproducible `nix run` bundle; bark + templatehash on public signet;
-live status dashboard; validated on-chain receive, board→Ark, and Lightning receive.
-**Phase 2 (in progress)** — CI + Cachix + Docker + Codespaces (the zero-compile onramp); an
-optional Bitcoin Inquisition node module (E).
+**Phase 1 & 2 — done.** Reproducible `nix run` bundle; bark + templatehash on the public
+signet; live status dashboard; validated on-chain receive, board→Ark, and Lightning receive;
+CI (Linux + macOS) + Cachix + Docker + Codespaces zero-compile onramp; a `bitcoind-inquisition`
+package, a `.#node` app, and the `nixosModules.inquisition-node` module (destined for
+nix-bitcoin).
+
+**Next** — faucet auto-funding for the templatehash Ark server, and more bundle demos as
+`products/`.
 
 ## License
 
