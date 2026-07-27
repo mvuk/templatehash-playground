@@ -118,6 +118,7 @@ import socket, sys
 start = int(sys.argv[1])
 for c in range(start, start + 20):
     s = socket.socket()
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # match http.server so TIME_WAIT ports are reusable
     try:
         s.bind(("127.0.0.1", c)); s.close(); print(c); break
     except OSError:
