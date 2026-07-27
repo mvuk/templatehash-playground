@@ -19,13 +19,30 @@
       url = "git+https://gitlab.com/ark-bitcoin/bark.git?ref=templatehash";
       flake = false;
     };
+    # (E) Bitcoin Inquisition is a fork of Core 29.x, so we base its derivation on a
+    # nixpkgs pin where bitcoind is 29.x (mirrors how nix-bitcoin vendors bitcoind_29).
+    nixpkgs-bitcoind29.url = "github:NixOS/nixpkgs/nixos-25.05";
+    inquisition = {
+      url = "github:bitcoin-inquisition/bitcoin?ref=29.x";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils, fenix, bark }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs = { self, nixpkgs, flake-utils, fenix, bark, nixpkgs-bitcoind29, inquisition }:
+    (flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
         lib = pkgs.lib;
+
+        # (E) bitcoin-inquisition: a fork of Core 29.x that enables the BIP446/448 opcodes
+        # on the ordinary global signet. Based on a nixpkgs pin whose bitcoind is 29.x.
+        pkgs29 = import nixpkgs-bitcoind29 { inherit system; };
+        bitcoind-inquisition = pkgs29.bitcoind.overrideAttrs (_: {
+          pname = "bitcoind-inquisition";
+          version = "29.x-inquisition";
+          src = inquisition;
+          doInstallCheck = false; # upstream versionCheckHook won't match the fork's version string
+        });
 
         # Toolchain pin copied verbatim from bark's own flake.nix.
         rustVersion = "1.90.0";
@@ -138,9 +155,22 @@
             WorkingDir = "/tmp";
           };
         };
+
+        # (E) Run a local Bitcoin Inquisition node on the global signet.
+        nodeApp = pkgs.writeShellScriptBin "node" ''
+          export PATH=${lib.makeBinPath [ bitcoind-inquisition pkgs.coreutils ]}:$PATH
+          DATADIR="''${INQUISITION_DATADIR:-$PWD/playground-data/inquisition}"
+          mkdir -p "$DATADIR"
+          echo "Starting bitcoin-inquisition on the (global) signet — datadir: $DATADIR"
+          echo "Same signet everyone uses, but this node enforces the BIP446/448 opcodes."
+          exec bitcoind -signet -datadir="$DATADIR" -txindex -server "$@"
+        '';
       in {
         packages = { inherit bark-cli; default = bark-cli; }
-          // lib.optionalAttrs pkgs.stdenv.isLinux { docker = dockerImage; };
+          // lib.optionalAttrs pkgs.stdenv.isLinux {
+            inherit bitcoind-inquisition;
+            docker = dockerImage;
+          };
 
         apps = (lib.mapAttrs (_: p: mkApp p.app) products) // {
           list = mkApp listApp;
@@ -148,6 +178,8 @@
           # `./playground` (default) opens the live status page, which also ensures the wallet.
           default = mkApp statusApp;
           playground = mkApp statusApp;
+        } // lib.optionalAttrs pkgs.stdenv.isLinux {
+          node = mkApp nodeApp; # (E) local inquisition signet node (Linux)
         };
 
         devShells.default = pkgs.mkShell {
@@ -164,5 +196,11 @@
           "shellcheck -S warning ${./playground}; touch $out";
 
         formatter = pkgs.nixfmt-rfc-style;
-      });
+      }))
+    // {
+      # (E) The nix-bitcoin-mergeable artifact: a NixOS module for a Bitcoin Inquisition
+      # signet node. System-agnostic; builds its own 29.x-based package by default.
+      nixosModules.inquisition-node =
+        import ./modules/inquisition-node.nix { inherit inquisition nixpkgs-bitcoind29; };
+    };
 }

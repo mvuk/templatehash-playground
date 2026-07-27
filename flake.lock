@@ -56,6 +56,23 @@
         "type": "github"
       }
     },
+    "inquisition": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784734417,
+        "narHash": "sha256-MUuyxC3MpUZd1vPFCvAymGt6pgclUDPUdE0rth0l98U=",
+        "owner": "bitcoin-inquisition",
+        "repo": "bitcoin",
+        "rev": "3db09a1b5821b049af295091055c39e0f80846c7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "bitcoin-inquisition",
+        "ref": "29.x",
+        "repo": "bitcoin",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1782847189,
@@ -71,12 +88,30 @@
         "type": "indirect"
       }
     },
+    "nixpkgs-bitcoind29": {
+      "locked": {
+        "lastModified": 1767313136,
+        "narHash": "sha256-16KkgfdYqjaeRGBaYsNrhPRRENs0qzkQVUooNHtoy2w=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "ac62194c3917d5f474c1a844b6fd6da2db95077d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-25.05",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "bark": "bark",
         "fenix": "fenix",
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs"
+        "inquisition": "inquisition",
+        "nixpkgs": "nixpkgs",
+        "nixpkgs-bitcoind29": "nixpkgs-bitcoind29"
       }
     },
     "rust-analyzer-src": {
