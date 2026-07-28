@@ -162,14 +162,15 @@ def toggle_eltoo():
 
 
 def run_test(cmd, timeout, name):
+    # Bitcoin Core functional-test exit codes: 0 = passed, 1 = failed, 77 = skipped.
     try:
         r = sh(cmd, timeout=timeout)
         out = (r.stdout + r.stderr)
-        return {"ok": r.returncode == 0, "name": name, "log": out[-4000:]}
+        return {"ok": r.returncode == 0, "skipped": r.returncode == 77, "name": name, "log": out[-4000:]}
     except subprocess.TimeoutExpired:
-        return {"ok": False, "name": name, "log": f"{name} timed out after {timeout}s"}
+        return {"ok": False, "skipped": False, "name": name, "log": f"{name} timed out after {timeout}s"}
     except Exception as e:  # noqa: BLE001
-        return {"ok": False, "name": name, "log": f"{name} error: {e}"}
+        return {"ok": False, "skipped": False, "name": name, "log": f"{name} error: {e}"}
 
 
 def test_eltoo():
@@ -193,7 +194,8 @@ def test_bundle():
     cfg.write_text(
         "[environment]\n"
         f"SRCDIR={INQ_SRC}\nBUILDDIR={INQ_PKG}\nEXEEXT=\n"
-        "[components]\nENABLE_WALLET=true\nENABLE_CLI=true\nENABLE_BITCOIND=true\n"
+        "[components]\nENABLE_WALLET=true\nUSE_SQLITE=true\nUSE_BDB=true\n"
+        "ENABLE_CLI=true\nENABLE_BITCOIN_UTIL=true\nENABLE_WALLET_TOOL=true\nENABLE_BITCOIND=true\n"
     )
     logs, all_ok = [], True
     for f, label in BUNDLE_TESTS:
@@ -201,8 +203,9 @@ def test_bundle():
         subprocess.run(["rm", "-rf", str(tmp)])
         r = run_test(["python3", f"{INQ_SRC}/test/functional/{f}",
                       f"--configfile={cfg}", f"--tmpdir={tmp}", f"--cachedir={RUNDIR}/cache"], 600, f)
-        all_ok = all_ok and r["ok"]
-        logs.append(f"### {f} — {label}: {'PASS' if r['ok'] else 'FAIL'}\n{(r['log'] or '')[-1200:]}")
+        verdict = "PASS" if r["ok"] else ("SKIP" if r.get("skipped") else "FAIL")
+        all_ok = all_ok and (r["ok"] or r.get("skipped"))  # a skip is not a failure
+        logs.append(f"### {f} — {label}: {verdict}\n{(r['log'] or '')[-1200:]}")
     return {"ok": all_ok, "name": "BIP448 bundle consensus tests", "log": "\n\n".join(logs)}
 
 
