@@ -4,3 +4,8 @@ result
 result-*
 .direnv/
 /ui/node_modules/
+
+# Never commit wallet state, however it gets renamed/archived
+playground-data*/
+**/mnemonic
+__pycache__/

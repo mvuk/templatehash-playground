@@ -5,11 +5,16 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
   Droplets, Zap, TerminalSquare, ExternalLink, BookOpen, Layers,
-  Loader2, CheckCircle2, XCircle, FlaskConical,
+  Loader2, CheckCircle2, XCircle, FlaskConical, Search, Wallet,
 } from "lucide-react";
 
 type Check = { ok: boolean; detail?: string };
+type NodeInfo = { blocks?: number; headers?: number; progress?: number; ibd?: boolean };
+type Component = "node" | "wallet" | "eltoo" | "explorer";
 type Status = {
+  enabled?: Record<Component, boolean>;
+  node?: NodeInfo;
+  explorer?: { ok: boolean; url?: string };
   ark?: Check; wallet?: Check; esplora?: Check; faucet?: Check;
   spendable_sat?: number | string; vtxo?: string; onchain?: string;
   ln_running?: boolean; node_running?: boolean; updated?: string;
@@ -80,7 +85,8 @@ export default function App() {
   const [s, setS] = useState<Status>({});
   const [busy, setBusy] = useState<{ [k: string]: boolean }>({});
   const [res, setRes] = useState<{ [k: string]: TestResult }>({});
-  const [toggling, setToggling] = useState(false);
+  // per-component toggle spinners, so switching the explorer doesn't grey out eltoo
+  const [toggling, setToggling] = useState<Partial<Record<Component, boolean>>>({});
 
   const load = () =>
     fetch("./status.json", { cache: "no-store" }).then((r) => r.json()).then(setS).catch(() => {});
@@ -104,12 +110,24 @@ export default function App() {
     }
   };
 
-  const toggleEltoo = async () => {
-    setToggling(true);
-    try { await post("/api/eltoo/toggle"); } catch { /* ignore */ }
+  // Every component is opt-in. Nothing here runs until its switch is flipped.
+  const on = (c: Component) => !!s.enabled?.[c];
+  const toggle = async (c: Component) => {
+    setToggling((t) => ({ ...t, [c]: true }));
+    try { await post(`/api/toggle/${c}`); } catch { /* ignore */ }
     await load();
-    setToggling(false);
+    setToggling((t) => ({ ...t, [c]: false }));
   };
+
+  const Toggle = ({ c }: { c: Component }) => (
+    <div className="ml-auto flex items-center gap-2">
+      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {toggling[c] ? <Loader2 className="h-3 w-3 animate-spin" /> : <Dot ok={on(c)} />}
+        {toggling[c] ? "…" : on(c) ? "running" : "off"}
+      </span>
+      <Switch checked={on(c)} disabled={!!toggling[c]} onCheckedChange={() => toggle(c)} />
+    </div>
+  );
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-10">
@@ -133,21 +151,47 @@ export default function App() {
         The stack — foundation first
       </h2>
 
-      {/* 0 — Foundation: the BIP448 bundle (Bitcoin Inquisition consensus) */}
+      {/* 0 — Foundation: the Inquisition node itself. The only thing running on arrival. */}
       <Card className="mb-4">
         <CardHeader>
           <div className="flex items-center gap-3">
             <Num n={0} />
-            <CardTitle className="text-base"><Layers className="mr-1 inline h-4 w-4 -translate-y-0.5" />The BIP448 bundle</CardTitle>
-            <Badge variant="secondary" className="ml-auto">Bitcoin Inquisition · foundation</Badge>
+            <CardTitle className="text-base"><Layers className="mr-1 inline h-4 w-4 -translate-y-0.5" />Bitcoin Inquisition node</CardTitle>
+            <Toggle c="node" />
           </div>
           <CardDescription className="pt-2">
-            The consensus opcodes everything else stands on — verified by the node's own tests. These
-            run against our <code>bitcoind-inquisition</code> build and are live on signet:
+            The foundation, and the one component that starts with the playground. A{" "}
+            <code>bitcoind-inquisition</code> node on the public <b className="text-foreground">signet</b>,
+            enforcing the BIP448 opcodes. Everything below is off until you switch it on.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-1.5 text-sm">
+          <div className="rounded-md border bg-secondary/40 p-3">
+            {on("node") ? (
+              <>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <Dot ok={!s.node?.ibd} />
+                    {s.node?.ibd ? "syncing" : "synced"}
+                  </span>
+                  <span>
+                    block <b className="text-foreground">{s.node?.blocks?.toLocaleString() ?? "…"}</b>
+                    {s.node?.headers ? ` / ${s.node.headers.toLocaleString()}` : ""}
+                  </span>
+                </div>
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                  <div className="h-full bg-primary transition-all" style={{ width: `${s.node?.progress ?? 0}%` }} />
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">{s.node?.progress ?? 0}% verified</div>
+              </>
+            ) : (
+              <div className="text-sm text-muted-foreground">Node is off — switch it on to connect to signet.</div>
+            )}
+          </div>
+          <div className="mt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Consensus opcodes this node enforces
+          </div>
+          <ul className="mt-1.5 space-y-1.5 text-sm">
             {BUNDLE_TESTS.map((t) => (
               <li key={t.file} className="flex flex-col">
                 <code className="text-[13px] text-foreground">{t.file}</code>
@@ -171,13 +215,7 @@ export default function App() {
           <div className="flex items-center gap-3">
             <Num n={1} />
             <CardTitle className="text-base"><Zap className="mr-1 inline h-4 w-4 -translate-y-0.5" />LN-Symmetry (eltoo)</CardTitle>
-            <div className="ml-auto flex items-center gap-2">
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                {toggling ? <Loader2 className="h-3 w-3 animate-spin" /> : <Dot ok={s.ln_running} />}
-                {toggling ? "…" : s.ln_running ? "running" : "stopped"}
-              </span>
-              <Switch checked={!!s.ln_running} disabled={toggling} onCheckedChange={toggleEltoo} />
-            </div>
+            <Toggle c="eltoo" />
           </div>
           <CardDescription className="pt-2">
             Rebindable Lightning channels (eltoo): a symmetric “latest-state-wins” ratchet with{" "}
@@ -196,10 +234,8 @@ export default function App() {
         <CardHeader>
           <div className="flex items-center gap-3">
             <Num n={2} />
-            <CardTitle className="text-base">templatehash Ark (bark)</CardTitle>
-            <Badge variant={s.ark?.ok ? "secondary" : "outline"} className="ml-auto gap-1.5">
-              <Dot ok={s.ark?.ok} /> server {s.ark?.detail ?? "…"}
-            </Badge>
+            <CardTitle className="text-base"><Wallet className="mr-1 inline h-4 w-4 -translate-y-0.5" />templatehash Ark (bark)</CardTitle>
+            <Toggle c="wallet" />
           </div>
           <CardDescription className="pt-2">
             A covenant Ark wallet built on <code>OP_TEMPLATEHASH</code> (verified in 0). This runs only the{" "}
@@ -211,18 +247,59 @@ export default function App() {
         <CardContent className="space-y-3">
           <pre className="rounded-md border bg-secondary/60 px-3 py-2 text-[13px]"><TerminalSquare className="mr-2 inline h-3.5 w-3.5" />./playground bark-templatehash</pre>
           <div className="rounded-md border bg-secondary/40 p-3">
-            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">This bark client's wallet</div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5"><Dot ok={s.wallet?.ok} /> wallet {s.wallet?.detail ?? "…"}</span>
-              <span className="flex items-center gap-1.5"><Dot ok={s.esplora?.ok} /> chain {s.esplora?.detail ?? "…"}</span>
-              <span className="flex items-center gap-1.5"><Dot ok={s.faucet?.ok} /> faucet</span>
-            </div>
-            <div className="mt-2 text-2xl font-bold text-foreground">{s.spendable_sat ?? "…"} <span className="text-sm font-normal text-muted-foreground">sat spendable</span></div>
-            <div className="mt-2 space-y-1 font-mono text-[11px] leading-relaxed text-muted-foreground">
-              <div className="break-all">VTXO: {s.vtxo ?? "…"}</div>
-              <div className="break-all">on-chain: {s.onchain ?? "…"}</div>
-            </div>
+            {on("wallet") ? (
+              <>
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">This bark client's wallet</div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1.5"><Dot ok={s.ark?.ok} /> server {s.ark?.detail ?? "…"}</span>
+                  <span className="flex items-center gap-1.5"><Dot ok={s.esplora?.ok} /> chain {s.esplora?.detail ?? "…"}</span>
+                  <span className="flex items-center gap-1.5"><Dot ok={s.faucet?.ok} /> faucet</span>
+                </div>
+                <div className="mt-2 text-2xl font-bold text-foreground">{s.spendable_sat ?? "…"} <span className="text-sm font-normal text-muted-foreground">sat spendable</span></div>
+                <div className="mt-2 space-y-1 font-mono text-[11px] leading-relaxed text-muted-foreground">
+                  <div className="break-all">VTXO: {s.vtxo ?? "…"}</div>
+                  <div className="break-all">on-chain: {s.onchain ?? "…"}</div>
+                </div>
+              </>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                No wallet yet. Switching this on creates a signet Ark wallet at{" "}
+                <code className="text-[12px]">playground-data/bark-templatehash</code> against{" "}
+                <code className="text-[12px]">ark.templatehash.com</code>. Switching it back off keeps the
+                wallet on disk — it is never deleted.
+              </div>
+            )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* 3 — Block explorer (btc-rpc-explorer), reads the node's RPC. Off by default. */}
+      <Card className="mb-4">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <Num n={3} />
+            <CardTitle className="text-base"><Search className="mr-1 inline h-4 w-4 -translate-y-0.5" />Block explorer</CardTitle>
+            <Toggle c="explorer" />
+          </div>
+          <CardDescription className="pt-2">
+            A local <code>btc-rpc-explorer</code> reading straight from component 0's RPC — no database,
+            no electrum server, nothing duplicated on disk. Browse blocks, transactions, the mempool and
+            fees on your own node.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {on("explorer") ? (
+            <a href={s.explorer?.url ?? "http://localhost:3002"} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" className="w-full">
+                <ExternalLink className="h-4 w-4" /> Open explorer — {s.explorer?.url ?? "http://localhost:3002"}
+              </Button>
+            </a>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              Off. Needs the node running, since every query is answered from its <code>-txindex</code>.
+              Address lookups stay disabled — those would require an electrum backend.
+            </div>
+          )}
         </CardContent>
       </Card>
 

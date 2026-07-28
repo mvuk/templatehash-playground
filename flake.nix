@@ -146,6 +146,10 @@
         # ---- product registry (auto-discovered) --------------------------------
         # Every products/<name>/product.nix that returns { description; app; }
         # becomes `nix run .#<name>`. Drop one in via PR and it appears here.
+        # btc-rpc-explorer (the block-explorer product) has no x86_64-darwin build in
+        # nixpkgs. Gate on availability so Intel Macs still get the rest of the playground.
+        explorerAvailable = lib.meta.availableOn pkgs.stdenv.hostPlatform pkgs.btc-rpc-explorer;
+
         productsDir = ./products;
         productEntries = builtins.readDir productsDir;
         productNames = builtins.filter
@@ -161,8 +165,12 @@
 
         defaultProduct = "bark-templatehash";
         # ln-symmetry needs the CLN eltoo build, so it's Linux-only; bark builds everywhere.
-        appProducts = if pkgs.stdenv.isLinux then products
-                      else builtins.removeAttrs products [ "ln-symmetry" ];
+        # btc-rpc-explorer has no x86_64-darwin build, so the explorer drops out there rather
+        # than breaking the whole flake for Intel Macs.
+        appProducts =
+          let byOS = if pkgs.stdenv.isLinux then products
+                     else builtins.removeAttrs products [ "ln-symmetry" ];
+          in if explorerAvailable then byOS else builtins.removeAttrs byOS [ "explorer" ];
         mkApp = drv: { type = "app"; program = lib.getExe drv; };
 
         listApp = pkgs.writeShellApplication {
@@ -183,6 +191,7 @@
         # Linux-only; on macOS the eltoo toggle + bundle tests report "not available".
         statusApp = pkgs.writeShellScriptBin "status" (''
           export PATH=${lib.makeBinPath ([ bark-cli pkgs.jq pkgs.curl pkgs.python3 pkgs.coreutils pkgs.procps ]
+            ++ lib.optionals explorerAvailable [ pkgs.btc-rpc-explorer ]
             ++ lib.optionals pkgs.stdenv.isLinux [ bitcoind-inquisition clightning-eltoo ])}''${PATH:+:$PATH}
           export PLAYGROUND_UI="${./ui/dist}"
           export INQ_SRC="${inquisition}"
@@ -191,10 +200,9 @@
           export RUN_SETTLE_TX="${clightning-eltoo}/libexec/eltoo-tests/run-settle_tx"
           export INQ_PKG="${bitcoind-inquisition}"
         '' + ''
-          if [ ! -e "$BARK_DATADIR/db.sqlite" ]; then
-            bark create --signet --datadir "$BARK_DATADIR" --ark ark.templatehash.com || true
-          fi
-          chmod 600 "$BARK_DATADIR/db.sqlite" 2>/dev/null || true
+          # Deliberately NOT provisioning anything here. The playground must arrive
+          # minimal: this web process plus component 0 (the inquisition signet node).
+          # The Ark wallet is created only when its toggle is switched on.
           exec python3 ${./lib/server.py}
         '');
 
