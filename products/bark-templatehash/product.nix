@@ -1,8 +1,9 @@
 # Product #1 — the reference example.
 # An Ark (bark) wallet on the public signet, pointed at the OP_TEMPLATEHASH
 # covenant Ark server (ark.templatehash.com) instead of bark's default signet Ark server.
-{ pkgs, lib, bark-cli }:
+{ pkgs, lib, bark-cli, ... }:
 {
+  order = 2; # chronological: templatehash (2025) comes after eltoo (2018)
   description = "Ark covenant wallet on signet via OP_TEMPLATEHASH (BIP446), Ark server = ark.templatehash.com";
 
   app = pkgs.writeShellApplication {

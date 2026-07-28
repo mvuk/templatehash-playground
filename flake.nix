@@ -32,9 +32,12 @@
       url = "github:bitcoin-inquisition/bitcoin?ref=29.x";
       flake = false;
     };
+    # (project #1: ln-symmetry) the eltoo Core Lightning fork is based on clightning 26.04,
+    # which lives in this nixpkgs pin (nixos-25.11 ships an older clightning).
+    nixpkgs-cln.url = "github:NixOS/nixpkgs/624af665418d3c65d544145b4d34ad696439570e";
   };
 
-  outputs = { self, nixpkgs, flake-utils, fenix, bark, nixpkgs-bitcoind29, inquisition }:
+  outputs = { self, nixpkgs, flake-utils, fenix, bark, nixpkgs-bitcoind29, inquisition, nixpkgs-cln }:
     (flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; config.allowUnfree = true; };
@@ -48,6 +51,45 @@
           version = "29.x-inquisition";
           src = inquisition;
           doInstallCheck = false; # upstream versionCheckHook won't match the fork's version string
+        });
+
+        # (project #1: ln-symmetry) instagibbs' Core Lightning eltoo fork, branch
+        # 2026-01-eltoo_templatehash. Based on clightning 26.04 (nixpkgs-cln). Ships a full
+        # eltoo channel state machine; we build+install the two eltoo subdaemons the branch's
+        # install list forgot, and run its eltoo settle-tx unit test in the build.
+        pkgsCln = import nixpkgs-cln { inherit system; };
+        clightning-eltoo = pkgsCln.clightning.overrideAttrs (old: {
+          pname = "clightning-eltoo";
+          version = "eltoo-templatehash";
+          src = pkgsCln.fetchFromGitHub {
+            owner = "instagibbs";
+            repo = "lightning";
+            rev = "c7710830769646fe7a6b1e45bd191333cbf62d6c";
+            fetchSubmodules = true;
+            hash = "sha256-Z5ZdIxVUr9wJLJsDiG4iAtStcp83cROz8pr/6Ygq5FM=";
+          };
+          makeFlags = [ "VERSION=v26.04.1-eltoo" ];
+          doInstallCheck = false;
+          # Run the eltoo settle-tx C unit test in the build (exercises the APO rebinding logic).
+          doCheck = true;
+          checkPhase = ''
+            runHook preCheck
+            echo "=== building eltoo settle-tx unit test ==="
+            make VERSION=v26.04.1-eltoo -j''${NIX_BUILD_CORES:-2} channeld/test/run-settle_tx
+            echo "=== running eltoo settle-tx unit test ==="
+            ./channeld/test/run-settle_tx
+            echo "=== eltoo settle-tx unit test PASSED ==="
+            runHook postCheck
+          '';
+          # The branch builds lightning_eltoo_{channeld,onchaind} (in ALL_PROGRAMS) but forgot
+          # them in PKGLIBEXEC_PROGRAMS, so `make install` skips them. Build + install by hand.
+          postInstall = (old.postInstall or "") + ''
+            echo "Building + installing the missing eltoo subdaemons…"
+            make VERSION=v26.04.1-eltoo -j''${NIX_BUILD_CORES:-2} \
+              lightningd/lightning_eltoo_channeld lightningd/lightning_eltoo_onchaind
+            install -m0755 -t "$out/libexec/c-lightning" \
+              lightningd/lightning_eltoo_channeld lightningd/lightning_eltoo_onchaind
+          '';
         });
 
         # Toolchain pin copied verbatim from bark's own flake.nix.
@@ -110,9 +152,15 @@
               && builtins.pathExists (productsDir + "/${n}/product.nix"))
           (builtins.attrNames productEntries);
         products = lib.genAttrs productNames (name:
-          import (productsDir + "/${name}/product.nix") { inherit pkgs lib bark-cli; });
+          import (productsDir + "/${name}/product.nix") { inherit pkgs lib bark-cli clightning-eltoo; });
+        # Order by each project's `order` field (chronological: ln-symmetry/eltoo #1, templatehash #2).
+        orderedProductNames = lib.sort
+          (a: b: (products.${a}.order or 99) < (products.${b}.order or 99)) productNames;
 
         defaultProduct = "bark-templatehash";
+        # ln-symmetry needs the CLN eltoo build, so it's Linux-only; bark builds everywhere.
+        appProducts = if pkgs.stdenv.isLinux then products
+                      else builtins.removeAttrs products [ "ln-symmetry" ];
         mkApp = drv: { type = "app"; program = lib.getExe drv; };
 
         listApp = pkgs.writeShellApplication {
@@ -120,8 +168,8 @@
           text = ''
             echo "templatehash-playground products:"
             echo ""
-          '' + lib.concatStringsSep "\n" (lib.mapAttrsToList
-            (n: p: "echo '  ${n}  —  ${p.description}'") products)
+          '' + lib.concatStringsSep "\n" (map
+            (n: "echo '  ${n}  —  ${products.${n}.description}'") orderedProductNames)
             + "\n" + ''
             echo ""
             echo "Run one with:  ./playground <name>   (or)   nix run .#<name>"
@@ -172,11 +220,11 @@
       in {
         packages = { inherit bark-cli; default = bark-cli; }
           // lib.optionalAttrs pkgs.stdenv.isLinux {
-            inherit bitcoind-inquisition;
+            inherit bitcoind-inquisition clightning-eltoo;
             docker = dockerImage;
           };
 
-        apps = (lib.mapAttrs (_: p: mkApp p.app) products) // {
+        apps = (lib.mapAttrs (_: p: mkApp p.app) appProducts) // {
           list = mkApp listApp;
           status = mkApp statusApp;
           # `./playground` (default) opens the live status page, which also ensures the wallet.

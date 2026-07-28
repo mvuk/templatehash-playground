@@ -11,10 +11,8 @@ A one-command, reproducible playground for the **BIP448 bundle** — Taproot-nat
 bundle at **[github.com/bip448](https://github.com/bip448)**.
 
 It's a registry of independent [projects](./products), each demoing part of the bundle on
-signet. The **first** one puts **Ark covenants** in your hands via `OP_TEMPLATEHASH`
-(BIP446, one opcode of the bundle) using [templatehash.com](https://templatehash.com)'s
-hosted server — but Ark is just entry #1; more projects plug in as the bundle's other
-pieces get exercised.
+signet — ordered oldest-tech-first: **LN-Symmetry (eltoo)** on Core Lightning, then **Ark
+covenants** via `OP_TEMPLATEHASH`. More plug in as the bundle's other pieces get exercised.
 
 ## Fastest path: hand it to your AI agent
 
@@ -49,16 +47,21 @@ docker run --rm -it -p 4848:4848 ghcr.io/mvuk/templatehash-playground
 
 ## Projects
 
-The playground is a registry of independent projects, each demoing part of the BIP448
-bundle on the public signet — `./playground list` shows them. **Right now there's exactly
-one, with room for many more:**
+The playground is a registry of independent projects (`./playground list`), **ordered
+oldest-tech-first**:
 
-- **`bark-templatehash`** *(the first — and currently only — project)* — a covenant-enabled
-  **bark client** (Ark wallet) exercising `OP_TEMPLATEHASH`.
-  > This starts the bark **client** and points it at the **hosted** Ark server
-  > `ark.templatehash.com`; it does **not** run a `captaind` / Ark server of your own.
+1. **`ln-symmetry`** — **LN-Symmetry (eltoo)** on Core Lightning (instagibbs' fork), built
+   reproducibly: the eltoo `lightningd` + its three eltoo subdaemons. eltoo replaces
+   Lightning's penalty transactions with a symmetric *latest-state-wins* ratchet, using
+   rebindable `update`+`settle` txs (`ANYPREVOUT`, or `CSFS`+`TEMPLATEHASH`). *(Linux.)*
+   `nix run .#ln-symmetry` shows the node + the runbook for a live signet channel.
+2. **`bark-templatehash`** — a covenant-enabled **bark client** (Ark wallet) exercising
+   `OP_TEMPLATEHASH`.
+   > Runs the bark **client** pointed at the **hosted** Ark server `ark.templatehash.com`;
+   > it does **not** run a `captaind` of your own.
 
-Adding the next project is a PR: copy [`products/_template/`](./products/_template) — see
+Deep dives for both live in [`docs/`](./docs). Adding the next project is a PR: copy
+[`products/_template/`](./products/_template) — see
 [Add your own experiment](#add-your-own-experiment).
 
 ## Funding a wallet
@@ -96,13 +99,15 @@ secret, and swap the substituter + key in `flake.nix`'s `nixConfig`.
 
 ## Status
 
-**Phase 1 & 2 — done.** Reproducible `nix run` bundle; bark + templatehash on the public
-signet; live status dashboard; validated on-chain receive, board→Ark, and Lightning receive;
-CI (Linux + macOS) + Cachix + Docker + Codespaces zero-compile onramp; a `bitcoind-inquisition`
-package, a `.#node` app, and the `nixosModules.inquisition-node` module (destined for
-nix-bitcoin).
+**Two projects, reproducible.** `ln-symmetry` (eltoo Core Lightning — `lightningd` + eltoo
+subdaemons, its eltoo settle-tx unit test run in the build) and `bark-templatehash` (Ark
+covenant client). A `bitcoind-inquisition` node (`.#node`) + `nixosModules.inquisition-node`
+(destined for nix-bitcoin). All five bundle opcodes **verified `active` on the live signet**
+(see [`docs/signet-verification.md`](./docs/signet-verification.md)). CI (Linux + macOS) +
+Cachix + Docker + Codespaces zero-compile onramp; live status dashboard for the bark demo.
 
-**Next** — faucet auto-funding for the templatehash Ark server, and more bundle demos as
+**Next** — a fully-automated two-node eltoo channel demo on signet (the CLN integration
+harness needs its non-NixOS container), faucet auto-funding, and more bundle demos as
 `products/`.
 
 ## License
