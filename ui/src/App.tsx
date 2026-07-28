@@ -5,8 +5,52 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
   Droplets, Zap, TerminalSquare, ExternalLink, BookOpen, Layers,
-  Loader2, CheckCircle2, XCircle, FlaskConical, Search, Wallet,
+  Loader2, CheckCircle2, XCircle, FlaskConical, Search, Wallet, Sun, Moon,
 } from "lucide-react";
+
+const TITLE = "Templatehash Playground";
+const SUBTITLE = "(Bitcoin Inquisition Signet)";
+
+/** Light/dark toggle. The initial class is set by an inline script in index.html so
+ *  there is no flash of the wrong theme before React mounts; this just keeps the
+ *  stored preference and the <html> class in step. */
+function useTheme(): ["light" | "dark", () => void] {
+  const read = (): "light" | "dark" =>
+    document.documentElement.classList.contains("dark") ? "dark" : "light";
+  const [theme, setTheme] = useState<"light" | "dark">(read);
+  const toggle = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    document.documentElement.classList.toggle("dark", next === "dark");
+    try { localStorage.setItem("theme", next); } catch { /* private mode */ }
+    setTheme(next);
+  };
+  return [theme, toggle];
+}
+
+function NavBar() {
+  const [theme, toggle] = useTheme();
+  return (
+    <nav className="sticky top-0 z-50 w-full border-b bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <div className="mx-auto flex max-w-2xl items-center gap-2 px-5 py-3">
+        <Layers className="h-4 w-4 shrink-0 text-primary" />
+        <span className="truncate text-sm font-semibold tracking-tight">
+          {TITLE}{" "}
+          <span className="font-normal text-muted-foreground">{SUBTITLE}</span>
+        </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="ml-auto shrink-0"
+          onClick={toggle}
+          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
+      </div>
+    </nav>
+  );
+}
 
 type Check = { ok: boolean; detail?: string };
 type NodeInfo = { blocks?: number; headers?: number; progress?: number; ibd?: boolean };
@@ -130,10 +174,11 @@ export default function App() {
   );
 
   return (
+    <>
+    <NavBar />
     <div className="mx-auto max-w-2xl px-5 py-10">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">templatehash playground</h1>
-        <p className="mt-1.5 text-muted-foreground">
+        <p className="text-muted-foreground">
           A hands-on environment for the <b className="text-foreground">BIP448 bundle</b> — Taproot-native
           rebindable transactions (covenants + eltoo) — on the{" "}
           <b className="text-foreground">Bitcoin Inquisition signet</b>, in a{" "}
@@ -310,5 +355,6 @@ export default function App() {
 
       <p className="mt-6 text-center text-xs text-muted-foreground">Bitcoin Inquisition signet · updated {s.updated ?? "…"} · auto-refresh 15s</p>
     </div>
+    </>
   );
 }

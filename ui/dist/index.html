@@ -1,11 +1,24 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>templatehash playground</title>
-    <script type="module" crossorigin src="./assets/index-BntWX1n5.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-8xI4Gfw1.css">
+    <title>Templatehash Playground (Bitcoin Inquisition Signet)</title>
+    <script>
+      // Applied before first paint so the page never flashes the wrong theme.
+      // Stored choice wins; otherwise follow the OS.
+      (function () {
+        try {
+          var t = localStorage.getItem("theme");
+          if (!t) t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          document.documentElement.classList.toggle("dark", t === "dark");
+        } catch (e) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="./assets/index-CFsQUqKd.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BWUrD_sQ.css">
   </head>
   <body>
     <div id="root"></div>
