@@ -89,6 +89,8 @@
               lightningd/lightning_eltoo_channeld lightningd/lightning_eltoo_onchaind
             install -m0755 -t "$out/libexec/c-lightning" \
               lightningd/lightning_eltoo_channeld lightningd/lightning_eltoo_onchaind
+            # expose the eltoo settle-tx unit test binary (built in checkPhase) for the UI's test button
+            install -Dm0755 channeld/test/run-settle_tx "$out/libexec/eltoo-tests/run-settle_tx"
           '';
         });
 
@@ -176,12 +178,25 @@
           '';
         };
 
-        # Live localhost dashboard: serves the prebuilt shadcn UI (./ui/dist) + a status.json.
-        statusApp = pkgs.writeShellScriptBin "status" ''
-          export PATH=${lib.makeBinPath [ bark-cli pkgs.jq pkgs.curl pkgs.python3 pkgs.coreutils pkgs.procps ]}''${PATH:+:$PATH}
+        # Live localhost control panel: serves the prebuilt shadcn UI (./ui/dist), computes
+        # status.json, and exposes the toggle/test API (lib/server.py). eltoo/node bits are
+        # Linux-only; on macOS the eltoo toggle + bundle tests report "not available".
+        statusApp = pkgs.writeShellScriptBin "status" (''
+          export PATH=${lib.makeBinPath ([ bark-cli pkgs.jq pkgs.curl pkgs.python3 pkgs.coreutils pkgs.procps ]
+            ++ lib.optionals pkgs.stdenv.isLinux [ bitcoind-inquisition clightning-eltoo ])}''${PATH:+:$PATH}
           export PLAYGROUND_UI="${./ui/dist}"
-          ${builtins.readFile ./lib/status-page.sh}
-        '';
+          export INQ_SRC="${inquisition}"
+          export BARK_DATADIR="''${BARK_DATADIR:-$PWD/playground-data/bark-templatehash}"
+        '' + lib.optionalString pkgs.stdenv.isLinux ''
+          export RUN_SETTLE_TX="${clightning-eltoo}/libexec/eltoo-tests/run-settle_tx"
+          export INQ_PKG="${bitcoind-inquisition}"
+        '' + ''
+          if [ ! -e "$BARK_DATADIR/db.sqlite" ]; then
+            bark create --signet --datadir "$BARK_DATADIR" --ark ark.templatehash.com || true
+          fi
+          chmod 600 "$BARK_DATADIR/db.sqlite" 2>/dev/null || true
+          exec python3 ${./lib/server.py}
+        '');
 
         # Entry dispatcher baked into the Docker image so `docker run <image> <product>` works.
         dockerEntry = pkgs.writeShellScriptBin "playground-entry" ''
@@ -204,7 +219,7 @@
           config = {
             Entrypoint = [ "${dockerEntry}/bin/playground-entry" ];
             ExposedPorts = { "4848/tcp" = { }; };
-            Env = [ "PLAYGROUND_PORT=4848" ];
+            Env = [ "PLAYGROUND_PORT=4848" "PLAYGROUND_HOST=0.0.0.0" ];
             WorkingDir = "/tmp";
           };
         };
