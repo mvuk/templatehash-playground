@@ -53,11 +53,20 @@ function NavBar() {
 }
 
 type Check = { ok: boolean; detail?: string };
-type NodeInfo = { blocks?: number; headers?: number; progress?: number; ibd?: boolean };
+type NodeInfo = {
+  chain?: string; blocks?: number; headers?: number; progress?: number; ibd?: boolean;
+  size_gb?: number; peers?: number; subversion?: string;
+  opcodes_active?: number; opcodes_total?: number; opcodes?: Record<string, boolean>;
+};
+type BuildInfo = {
+  build_hash?: string; build_name?: string; inquisition_rev?: string; nixpkgs_rev?: string;
+  playground_commit?: string; playground_branch?: string; bark_version?: string;
+};
 type Component = "node" | "wallet" | "eltoo" | "explorer";
 type Status = {
   enabled?: Record<Component, boolean>;
   node?: NodeInfo;
+  build?: BuildInfo;
   explorer?: { ok: boolean; url?: string };
   ark?: Check; wallet?: Check; esplora?: Check; faucet?: Check;
   spendable_sat?: number | string; vtxo?: string; onchain?: string;
@@ -81,6 +90,17 @@ function Dot({ ok }: { ok?: boolean }) {
       className={`inline-block h-2.5 w-2.5 rounded-full ${ok ? "bg-emerald-500" : "bg-rose-500"}`}
       style={{ boxShadow: `0 0 0 3px ${ok ? "rgba(16,185,129,.18)" : "rgba(244,63,94,.18)"}` }}
     />
+  );
+}
+
+function BuildRow({ k, v }: { k: string; v?: string }) {
+  return (
+    <div className="flex min-w-0 items-baseline gap-2">
+      <dt className="shrink-0 text-muted-foreground">{k}</dt>
+      <dd className="min-w-0 truncate font-mono text-[11px] text-foreground" title={v}>
+        {v ?? "—"}
+      </dd>
+    </div>
   );
 }
 
@@ -196,8 +216,10 @@ export default function App() {
         The stack — foundation first
       </h2>
 
-      {/* 0 — Foundation: the Inquisition node itself. The only thing running on arrival. */}
-      <Card className="mb-4">
+      {/* 0 — Foundation: the Inquisition node itself. The only thing running on arrival.
+          Visually set apart (lighter panel) because it is the connectivity readout the
+          whole page depends on. */}
+      <Card className="mb-4 border-primary/20 bg-muted/50">
         <CardHeader>
           <div className="flex items-center gap-3">
             <Num n={0} />
@@ -211,32 +233,70 @@ export default function App() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border bg-secondary/40 p-3">
+          <div className="rounded-md border bg-background/60 p-3">
             {on("node") ? (
               <>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
-                    <Dot ok={!s.node?.ibd} />
-                    {s.node?.ibd ? "syncing" : "synced"}
-                  </span>
-                  <span>
-                    block <b className="text-foreground">{s.node?.blocks?.toLocaleString() ?? "…"}</b>
-                    {s.node?.headers ? ` / ${s.node.headers.toLocaleString()}` : ""}
-                  </span>
+                {/* Connectivity headline — the thing you want to see at a glance. */}
+                <div className="flex items-baseline justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-1.5 text-sm font-medium">
+                      <Dot ok={!s.node?.ibd} />
+                      {s.node?.ibd ? "Syncing to signet" : "Connected to signet"}
+                    </div>
+                    <div className="mt-1 font-mono text-3xl font-bold tabular-nums text-foreground">
+                      {s.node?.blocks?.toLocaleString() ?? "…"}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      block height{s.node?.ibd && s.node?.headers ? ` of ${s.node.headers.toLocaleString()}` : ""}
+                    </div>
+                  </div>
+                  <Badge variant={s.node?.opcodes_active === s.node?.opcodes_total ? "secondary" : "outline"} className="gap-1.5">
+                    <Dot ok={s.node?.opcodes_active === s.node?.opcodes_total} />
+                    {s.node?.opcodes_active ?? "?"}/{s.node?.opcodes_total ?? "?"} opcodes active
+                  </Badge>
                 </div>
-                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                  <div className="h-full bg-primary transition-all" style={{ width: `${s.node?.progress ?? 0}%` }} />
+
+                {s.node?.ibd && (
+                  <>
+                    <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+                      <div className="h-full bg-primary transition-all" style={{ width: `${s.node?.progress ?? 0}%` }} />
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">{s.node?.progress ?? 0}% verified</div>
+                  </>
+                )}
+
+                {/* Connectivity detail */}
+                <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 border-t pt-3 text-xs sm:grid-cols-4">
+                  <div><div className="text-muted-foreground">peers</div><div className="font-medium text-foreground">{s.node?.peers ?? "…"}</div></div>
+                  <div><div className="text-muted-foreground">chain</div><div className="font-medium text-foreground">{s.node?.chain ?? "…"}</div></div>
+                  <div><div className="text-muted-foreground">verified</div><div className="font-medium text-foreground">{s.node?.progress ?? "…"}%</div></div>
+                  <div><div className="text-muted-foreground">on disk</div><div className="font-medium text-foreground">{s.node?.size_gb ?? "…"} GB</div></div>
                 </div>
-                <div className="mt-1 text-xs text-muted-foreground">{s.node?.progress ?? 0}% verified</div>
+                {s.node?.subversion && (
+                  <div className="mt-2 font-mono text-[11px] text-muted-foreground">{s.node.subversion}</div>
+                )}
               </>
             ) : (
               <div className="text-sm text-muted-foreground">Node is off — switch it on to connect to signet.</div>
             )}
           </div>
+
+          {/* Per-opcode consensus state, read live from getdeploymentinfo. */}
           <div className="mt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Consensus opcodes this node enforces
           </div>
-          <ul className="mt-1.5 space-y-1.5 text-sm">
+          {on("node") && s.node?.opcodes ? (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {Object.entries(s.node.opcodes).map(([name, active]) => (
+                <Badge key={name} variant="outline" className="gap-1.5 font-mono text-[11px]">
+                  <Dot ok={active} />{name}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-1.5 text-xs text-muted-foreground">Node off — activation state unknown.</div>
+          )}
+          <ul className="mt-3 space-y-1.5 text-sm">
             {BUNDLE_TESTS.map((t) => (
               <li key={t.file} className="flex flex-col">
                 <code className="text-[13px] text-foreground">{t.file}</code>
@@ -244,6 +304,27 @@ export default function App() {
               </li>
             ))}
           </ul>
+
+          {/* What is actually running: derived from the live process and the flake pins,
+              so it stays honest across rebuilds. */}
+          <div className="mt-4 rounded-md border bg-background/60 p-3">
+            <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              This build
+            </div>
+            <dl className="grid grid-cols-1 gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2">
+              <BuildRow k="bitcoind" v={s.node?.subversion || s.build?.build_name} />
+              <BuildRow k="nix build" v={s.build?.build_hash} />
+              <BuildRow k="inquisition rev" v={s.build?.inquisition_rev} />
+              <BuildRow k="nixpkgs rev" v={s.build?.nixpkgs_rev} />
+              <BuildRow k="bark client" v={s.build?.bark_version} />
+              <BuildRow
+                k="playground"
+                v={s.build?.playground_commit
+                  ? `${s.build.playground_commit}${s.build.playground_branch ? ` on ${s.build.playground_branch}` : ""}`
+                  : undefined}
+              />
+            </dl>
+          </div>
           <TestPanel
             label="Verify bundle tests pass"
             hint="running 3 consensus suites — this takes a few minutes"

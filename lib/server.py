@@ -145,22 +145,97 @@ def node_rpc_up():
         s.close()
 
 
+BUNDLE_OPCODES = ("templatehash", "checksigfromstack", "internalkey",
+                  "checktemplateverify", "anyprevout", "op_cat", "consensuscleanup")
+
+
+def cli(*args, timeout=10):
+    """Call the inquisition node's own bitcoin-cli."""
+    return sh([f"{INQ_PKG}/bin/bitcoin-cli", "-signet", f"-datadir={NODE_DATADIR}", *args],
+              timeout=timeout)
+
+
+def build_info():
+    """Provenance of the software actually running — not what the docs claim.
+
+    Every field is derived from the live process or the flake pins: the store hash is the
+    real derivation this bitcoind came out of, and the revs come from flake.lock. If a
+    rebuild changes the pin, these change with it.
+    """
+    out = {}
+    # nix store hash of the bitcoind-inquisition build serving this node
+    if INQ_PKG:
+        base = os.path.basename(INQ_PKG)
+        out["build_hash"] = base.split("-", 1)[0][:12]
+        out["build_name"] = base.split("-", 1)[1] if "-" in base else base
+    # source revs from the flake lock (cwd is the repo when launched via ./playground)
+    try:
+        lock = json.load(open("flake.lock"))
+        for node, key in (("inquisition", "inquisition_rev"), ("nixpkgs", "nixpkgs_rev")):
+            rev = lock.get("nodes", {}).get(node, {}).get("locked", {}).get("rev")
+            if rev:
+                out[key] = rev[:12]
+    except Exception:
+        pass
+    # the playground's own commit
+    try:
+        r = sh(["git", "rev-parse", "--short", "HEAD"], timeout=5)
+        if r.returncode == 0:
+            out["playground_commit"] = r.stdout.strip()
+        b = sh(["git", "rev-parse", "--abbrev-ref", "HEAD"], timeout=5)
+        if b.returncode == 0:
+            out["playground_branch"] = b.stdout.strip()
+    except Exception:
+        pass
+    # bark client version (the wallet binary this playground ships)
+    try:
+        r = sh(["bark", "--version"], timeout=10)
+        if r.returncode == 0:
+            out["bark_version"] = r.stdout.strip().splitlines()[0]
+    except Exception:
+        pass
+    return out
+
+
 def node_info():
-    """Sync state of component 0, read straight from the node's own RPC."""
+    """Connectivity + sync + consensus state of component 0, from the node's own RPC.
+
+    Everything here is read live rather than assumed: the opcode states come from
+    getdeploymentinfo, so they report what this node actually enforces at its current
+    tip (they read inactive during IBD, which is correct, not a bug).
+    """
     if not INQ_PKG:
         return {}
     try:
-        r = sh([f"{INQ_PKG}/bin/bitcoin-cli", "-signet", f"-datadir={NODE_DATADIR}",
-                "getblockchaininfo"], timeout=10)
+        r = cli("getblockchaininfo")
         if r.returncode != 0:
             return {}
         d = json.loads(r.stdout)
-        return {
+        info = {
+            "chain": d.get("chain"),
             "blocks": d.get("blocks"),
             "headers": d.get("headers"),
             "progress": round(d.get("verificationprogress", 0) * 100, 2),
             "ibd": d.get("initialblockdownload"),
+            "size_gb": round(d.get("size_on_disk", 0) / 1e9, 2),
         }
+        try:
+            info["peers"] = int(cli("getconnectioncount").stdout.strip())
+        except Exception:
+            info["peers"] = None
+        try:
+            info["subversion"] = json.loads(cli("getnetworkinfo").stdout).get("subversion", "")
+        except Exception:
+            info["subversion"] = ""
+        try:
+            dep = json.loads(cli("getdeploymentinfo").stdout).get("deployments", {})
+            active = [n for n in BUNDLE_OPCODES if dep.get(n, {}).get("active")]
+            info["opcodes_active"] = len(active)
+            info["opcodes_total"] = len(BUNDLE_OPCODES)
+            info["opcodes"] = {n: bool(dep.get(n, {}).get("active")) for n in BUNDLE_OPCODES}
+        except Exception:
+            pass
+        return info
     except Exception:
         return {}
 
@@ -181,6 +256,10 @@ def status():
         "node_running": en["node"],
         "updated": time.strftime("%H:%M:%S"),
     }
+
+    # Build provenance describes the playground itself, so it is reported even with
+    # everything off — it costs no network and nothing has to be running to be true.
+    out["build"] = BUILD_INFO
 
     if en["node"]:
         out["node"] = node_info()
@@ -370,6 +449,11 @@ def test_bundle():
         all_ok = all_ok and (r["ok"] or r.get("skipped"))  # a skip is not a failure
         logs.append(f"### {f} — {label}: {verdict}\n{(r['log'] or '')[-1200:]}")
     return {"ok": all_ok, "name": "BIP448 bundle consensus tests", "log": "\n\n".join(logs)}
+
+
+# Computed once at startup: these are fixed for the life of the process, and shelling
+# out to git/bark on every 15s poll would defeat the point of the lazy status().
+BUILD_INFO = build_info()
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
