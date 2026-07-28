@@ -176,9 +176,10 @@
           '';
         };
 
-        # Live localhost status page (writeShellScriptBin => no shellcheck on the heredoc HTML).
+        # Live localhost dashboard: serves the prebuilt shadcn UI (./ui/dist) + a status.json.
         statusApp = pkgs.writeShellScriptBin "status" ''
-          export PATH=${lib.makeBinPath [ bark-cli pkgs.jq pkgs.curl pkgs.python3 pkgs.coreutils ]}''${PATH:+:$PATH}
+          export PATH=${lib.makeBinPath [ bark-cli pkgs.jq pkgs.curl pkgs.python3 pkgs.coreutils pkgs.procps ]}''${PATH:+:$PATH}
+          export PLAYGROUND_UI="${./ui/dist}"
           ${builtins.readFile ./lib/status-page.sh}
         '';
 

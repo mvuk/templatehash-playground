@@ -3,3 +3,4 @@
 result
 result-*
 .direnv/
+/ui/node_modules/
